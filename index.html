@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Although or Despite?</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Lexend:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+
+/* Layout: one lesson card per screen. The core device is a two-station time track (1 First -> 2 Then).
+   Single bright classroom theme by choice, for projectors and student laptops. */
+:root{
+  --sky:#E8F1F6; --card:#FFFFFF; --ink:#1B2838; --muted:#566778; --line:#C6D5E0;
+  --first:#2361C8; --first-soft:#DCE7FB;
+  --then:#14875A; --then-soft:#D6F0E3;
+  --kw:#F4B11C; --kw-soft:#FFF0C2;
+  --bad:#C23F2E; --bad-soft:#FBE2DD;
+  --amber:#9A6200; --amber-line:#E2A31A;
+  --display:"Baloo 2","Trebuchet MS",system-ui,sans-serif;
+  --body:"Lexend","Atkinson Hyperlegible","Segoe UI",system-ui,sans-serif;
+  --emoji:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif;
+  color-scheme:light;
+}
+html,body{background:var(--sky);color:var(--ink)}
+body{font-family:var(--body);font-size:18px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 48px}
+.wrap{max-width:880px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+header{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px}
+h1{font-family:var(--display);font-weight:800;font-size:clamp(30px,6vw,44px);line-height:1;margin:0;text-wrap:balance}
+h1 .c1{color:var(--first)} h1 .c2{color:var(--then)}
+.tabs{display:flex;flex-wrap:wrap;gap:4px;background:var(--card);padding:5px;border-radius:999px;border:2px solid var(--line)}
+.tab{font:inherit;font-size:15px;font-weight:500;border:0;background:transparent;color:var(--muted);padding:8px 16px;border-radius:999px;cursor:pointer}
+.tab:hover{color:var(--ink)}
+.tab[aria-selected="true"]{background:var(--ink);color:#fff}
+button:focus-visible{outline:3px solid var(--kw);outline-offset:3px}
+
+.status{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:15px;color:var(--muted)}
+.dots{display:flex;gap:6px}
+.dot{width:14px;height:14px;border-radius:50%;background:var(--card);border:2px solid var(--line)}
+.dot.now{border-color:var(--ink)}
+.dot.ok{background:var(--then);border-color:var(--then)}
+.dot.no{background:var(--bad);border-color:var(--bad)}
+.dot.retry{background:var(--amber-line);border-color:var(--amber-line)}
+.score{font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums}
+
+.stage{background:var(--card);border:2px solid var(--line);border-radius:22px;padding:24px clamp(16px,4vw,32px) 28px;display:flex;flex-direction:column;gap:20px}
+.prompt{margin:0;color:var(--muted);font-size:16px}
+.sentence-row{display:flex;align-items:flex-start;gap:12px}
+.sentence{flex:1;min-width:0;margin:0;font-size:clamp(22px,4.6vw,32px);font-weight:500;line-height:1.45;text-wrap:balance}
+.kw{background:var(--kw);border-radius:8px;padding:0 .22em;font-weight:700;box-decoration-break:clone;-webkit-box-decoration-break:clone}
+.revealed .e1{color:var(--first);text-decoration:underline 4px var(--first);text-underline-offset:6px}
+.revealed .e2{color:var(--then);text-decoration:underline 4px var(--then);text-underline-offset:6px}
+.speak{flex:none;font:inherit;font-size:15px;font-weight:500;border:2px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:6px 14px;cursor:pointer}
+.speak:hover{border-color:var(--ink)}
+
+/* time track */
+.track{display:grid;grid-template-columns:1fr auto 1fr;align-items:stretch;gap:10px}
+.slot{border:3px dashed var(--first);background:var(--first-soft);border-radius:18px;min-height:168px;display:flex;flex-direction:column;align-items:center;gap:8px;padding:10px;cursor:pointer;font:inherit;color:inherit;min-width:0}
+.slot.s2{border-color:var(--then);background:var(--then-soft)}
+.slot.filled{border-style:solid}
+.slot.drag{outline:3px solid var(--kw);outline-offset:2px}
+.slot-label{font-family:var(--display);font-weight:800;font-size:20px;line-height:1;color:var(--first)}
+.slot.s2 .slot-label{color:var(--then)}
+.slot-empty{margin:auto;color:var(--muted);font-size:15px;text-align:center}
+.arrow{align-self:center;font-family:var(--display);font-size:40px;font-weight:800;color:var(--muted)}
+
+.tray{display:flex;flex-wrap:wrap;justify-content:center;gap:16px;min-height:150px;align-items:center;border-radius:18px;background:var(--sky);padding:14px}
+.tray-empty{color:var(--muted);font-size:15px}
+.pic{display:flex;flex-direction:column;align-items:center;gap:4px;background:var(--card);border:2px solid var(--line);border-radius:16px;padding:12px 14px 10px;width:150px;max-width:100%;font:inherit;color:var(--ink);cursor:grab;box-shadow:0 4px 0 var(--line);transition:transform .12s}
+.pic:hover{transform:translateY(-2px)}
+.slot .pic{box-shadow:none;cursor:pointer;width:100%;max-width:150px}
+.emo{font-family:var(--emoji);font-size:54px;line-height:1.1}
+.lbl{font-size:16px;font-weight:500;text-align:center;line-height:1.25}
+
+/* build mode */
+.pics{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:center}
+.fixed{border-radius:18px;padding:10px;display:flex;flex-direction:column;align-items:center;gap:6px;border:3px solid var(--first);background:var(--first-soft)}
+.fixed.s2{border-color:var(--then);background:var(--then-soft)}
+.fixed .slot-label{color:var(--first)} .fixed.s2 .slot-label{color:var(--then)}
+.frame{font-size:clamp(20px,4.2vw,28px);font-weight:500;line-height:2.1;margin:0}
+.blank{font:inherit;font-size:.82em;display:inline-block;min-width:7.5em;border:0;border-bottom:3px solid var(--ink);background:var(--sky);border-radius:8px 8px 0 0;padding:0 .4em;cursor:pointer;color:var(--ink);line-height:1.6;vertical-align:baseline}
+.blank.filled{background:var(--kw-soft)}
+.blank.c1{background:var(--first-soft);border-color:var(--first);color:var(--first)}
+.blank.c2{background:var(--then-soft);border-color:var(--then);color:var(--then)}
+.tiles{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;min-height:64px;align-items:center;background:var(--sky);border-radius:18px;padding:12px}
+.tile{font:inherit;font-size:18px;font-weight:500;background:var(--card);color:var(--ink);border:2px solid var(--line);box-shadow:0 4px 0 var(--line);border-radius:12px;padding:8px 16px;cursor:pointer}
+
+/* true or silly */
+.choices{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.choice{font-family:var(--display);font-weight:800;font-size:clamp(22px,4.5vw,30px);border-radius:18px;border:3px solid var(--then);background:var(--then-soft);color:var(--then);padding:18px 10px;cursor:pointer;line-height:1.1}
+.choice.silly{border-color:var(--bad);background:var(--bad-soft);color:var(--bad)}
+.choice[disabled]{opacity:.45;cursor:default}
+.choice.picked{opacity:1;box-shadow:0 0 0 4px var(--kw)}
+.claim{display:flex;align-items:center;justify-content:center;gap:10px;font-size:16px;flex-wrap:wrap}
+.claim .emo{font-size:40px}
+
+.actions{display:flex;justify-content:center;gap:12px}
+.btn{font:inherit;font-weight:700;font-size:19px;border:0;border-radius:14px;background:var(--ink);color:#fff;padding:12px 34px;cursor:pointer;box-shadow:0 4px 0 #0b131d}
+.btn[disabled]{background:var(--line);color:var(--muted);box-shadow:none;cursor:default}
+.btn.ghost{background:var(--card);color:var(--ink);border:2px solid var(--ink);box-shadow:none}
+
+.fb{border-radius:16px;padding:14px 18px;font-size:18px;display:flex;flex-direction:column;gap:6px}
+.fb.ok{background:var(--then-soft);border:2px solid var(--then)}
+.fb.no{background:var(--bad-soft);border:2px solid var(--bad)}
+.fb.try{background:var(--kw-soft);border:2px solid var(--amber-line)}
+.fb.try .fb-head{color:var(--amber)}
+.tries-left{margin:0;font-weight:700;color:var(--amber);font-size:16px}
+.fb-head{font-family:var(--display);font-weight:800;font-size:24px;line-height:1.1}
+.fb.ok .fb-head{color:var(--then)} .fb.no .fb-head{color:var(--bad)}
+.fb p{margin:0}
+.c1{color:var(--first);font-weight:700} .c2{color:var(--then);font-weight:700}
+.kwc{background:var(--kw);border-radius:6px;padding:0 .2em}
+
+/* rules strip */
+.rules{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.rule{background:var(--card);border:2px solid var(--line);border-radius:16px;padding:12px 16px;display:flex;flex-direction:column;gap:2px}
+.rule-word{font-family:var(--display);font-weight:800;font-size:24px;line-height:1.1}
+.rule p{margin:0;font-size:16px}
+.rules-head{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.rules-head h2{font-size:15px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0}
+.toggle{font:inherit;font-size:14px;border:2px solid var(--line);background:var(--card);border-radius:999px;padding:4px 12px;cursor:pointer;color:var(--ink)}
+
+.end{text-align:center;display:flex;flex-direction:column;gap:14px;align-items:center;padding:12px 0}
+.stars{font-family:var(--emoji);font-size:56px;letter-spacing:6px}
+.end h2{font-family:var(--display);font-weight:800;font-size:40px;margin:0;line-height:1}
+
+/* progress band */
+.band{display:grid;grid-template-columns:auto 1fr auto;gap:10px 16px;align-items:center;border-radius:20px;padding:14px 18px;border:3px solid var(--line);background:var(--card)}
+.band.green{border-color:var(--then);background:var(--then-soft)}
+.band.amber{border-color:var(--amber-line);background:var(--kw-soft)}
+.band.red{border-color:var(--bad);background:var(--bad-soft)}
+.who{font-family:var(--display);font-weight:800;font-size:clamp(26px,5vw,38px);line-height:1;display:flex;align-items:center;gap:12px;min-width:0;overflow-wrap:anywhere}
+.light{width:28px;height:28px;border-radius:50%;background:var(--line);flex:none;border:3px solid var(--card)}
+.green .light{background:var(--then)} .amber .light{background:var(--amber-line)} .red .light{background:var(--bad)}
+.state{font-weight:700;font-size:20px;color:var(--muted)}
+.green .state{color:var(--then)} .amber .state{color:var(--amber)} .red .state{color:var(--bad)}
+.reset{font:inherit;font-size:14px;border:2px solid var(--line);background:var(--card);color:var(--muted);border-radius:999px;padding:4px 12px;cursor:pointer}
+.reset.armed{border-color:var(--bad);color:var(--bad);font-weight:700}
+.modes{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:8px}
+.mchip{font-size:15px;background:var(--card);border:2px solid var(--line);border-radius:999px;padding:4px 12px;color:var(--muted)}
+.mchip b{color:var(--ink);font-weight:700}
+.mchip .st{color:var(--amber-line);letter-spacing:1px}
+.mchip.cur{border-color:var(--ink)}
+.help{grid-column:1/-1;margin:0;font-weight:700;color:var(--bad);font-size:18px}
+.namebox{display:flex;flex-direction:column;gap:14px;align-items:center;text-align:center;padding:20px 0}
+.nm-label{font-family:var(--display);font-weight:800;font-size:clamp(26px,5vw,34px);line-height:1.1}
+.namebox .winput{max-width:360px;text-align:center;font-size:24px}
+
+
+/* write mode */
+.clause{margin:0;font-weight:700;text-align:center;font-size:17px;line-height:1.3}
+.wrows{display:flex;flex-direction:column;gap:14px}
+.wrow{display:flex;flex-direction:column;gap:8px;padding:12px 14px;border:2px solid var(--line);border-radius:16px;background:var(--card)}
+.wrow.ok{border-color:var(--then);background:var(--then-soft)}
+.wrow.no{border-color:var(--bad);background:var(--bad-soft)}
+.wlabel{font-size:19px;font-weight:500;display:flex;gap:10px;align-items:center;flex-wrap:wrap;color:var(--muted)}
+.wlabel .kw{color:var(--ink)}
+.wnum{display:inline-grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--ink);color:#fff;font-weight:700;font-size:15px;flex:none}
+.winput{font:inherit;font-size:20px;width:100%;box-sizing:border-box;padding:10px 12px;border:2px solid var(--line);border-radius:12px;background:var(--card);color:var(--ink);min-width:0}
+.winput:focus{outline:3px solid var(--kw);outline-offset:1px;border-color:var(--ink)}
+.winput[readonly]{background:transparent;border-color:transparent;font-weight:500}
+.wfb{margin:0;font-size:16px;font-weight:500}
+.wrow.ok .wfb{color:var(--then)} .wrow.no .wfb{color:var(--bad)}
+.wmodel{margin:0;font-size:18px}
+.wmodel::before{content:"Answer: ";color:var(--muted);font-weight:500}
+@media (max-width:560px){
+  .band{grid-template-columns:1fr auto}
+  .reset{grid-column:1/-1;justify-self:start}
+  .track,.pics{grid-template-columns:1fr 1fr}
+  .arrow{display:none}
+  .rules{grid-template-columns:1fr}
+  .pic{width:132px}
+  .emo{font-size:46px}
+  .sentence-row{flex-direction:column}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+
+/* additions for the connector tools */
+.fixed{min-width:0}
+.fixed .pic{position:relative;cursor:default;box-shadow:none;width:100%;max-width:150px;box-sizing:border-box}
+.nope{position:absolute;right:-8px;top:-8px;width:34px;height:34px;border-radius:50%;background:var(--bad);color:#fff;font-weight:800;font-size:20px;display:grid;place-items:center;line-height:1;border:3px solid var(--card)}
+.sub{margin:0;font-size:15px;color:var(--muted);text-align:center}
+.sub b{color:var(--first)}
+.gap{display:inline-block;min-width:4.2em;border-bottom:4px solid var(--ink);background:var(--kw-soft);border-radius:8px 8px 0 0;text-align:center;color:var(--muted)}
+.choice.word{border-color:var(--ink);background:var(--card);color:var(--ink)}
+.scene{display:flex;flex-direction:column;align-items:center;gap:6px;background:var(--sky);border-radius:18px;padding:14px;text-align:center}
+.scene-label{font-size:15px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.scene-line{display:flex;align-items:center;gap:12px;font-size:clamp(20px,4.2vw,26px);font-weight:500;flex-wrap:wrap;justify-content:center}
+.scene-line .emo{font-size:44px}
+.rule-note{grid-column:1/-1;margin:0;font-size:16px;background:var(--bad-soft);border:2px solid var(--bad);border-radius:14px;padding:8px 14px}
+.mini{position:relative;display:inline-block}
+.mini .nope{width:26px;height:26px;font-size:15px;right:-10px;top:-6px}
+.end .actions{flex-wrap:wrap}
+.mchip{font:inherit;font-size:15px;cursor:pointer}
+.mchip:hover{border-color:var(--ink)}
+body{padding-top:max(20px,env(safe-area-inset-top,0px))}
+
+.gap.big{min-width:5em}
+.gap.dim{background:transparent;border-bottom-style:dashed;border-color:var(--line)}
+.pcards{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.pcard{display:flex;flex-direction:column;align-items:center;gap:8px;background:var(--card);border:3px solid var(--line);border-radius:18px;padding:14px 10px;font:inherit;color:var(--ink);cursor:pointer;box-shadow:0 4px 0 var(--line);min-width:0}
+.pcard:hover{border-color:var(--ink)}
+.pcard[disabled]{cursor:default}
+.pcard .emo{font-size:48px}
+.pcard .lbl{font-size:19px}
+.pcard.right{border-color:var(--then);background:var(--then-soft);box-shadow:none}
+.pcard.wrong{border-color:var(--bad);background:var(--bad-soft);box-shadow:none}
+
+.learn{display:flex;flex-direction:column;gap:16px}
+.learn-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.learn h2{font-family:var(--display);font-weight:800;font-size:clamp(26px,5vw,34px);line-height:1.1;margin:0}
+.learn p{margin:0}
+.lp{font-size:20px}
+.ex{font-size:clamp(21px,4.4vw,28px);font-weight:500;line-height:1.5;background:var(--sky);border-radius:14px;padding:10px 16px}
+.ex.bad{background:var(--bad-soft);border:2px solid var(--bad)}
+.ex.good{background:var(--then-soft);border:2px solid var(--then)}
+.ex .mark{font-family:var(--display);font-weight:800;margin-right:8px}
+.ex.bad .mark{color:var(--bad)} .ex.good .mark{color:var(--then)}
+.strike{text-decoration:line-through 3px var(--bad);color:var(--muted)}
+.lrow{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;font-size:20px;font-weight:500;text-align:center}
+.lrow .emo{font-size:46px}
+.lrow .big{font-family:var(--display);font-weight:800;font-size:30px;color:var(--muted)}
+.tip{background:var(--kw-soft);border:2px solid var(--amber-line);border-radius:14px;padding:10px 16px;font-size:19px}
+
+.oframe{line-height:2.4}
+.oslot{font:inherit;font-size:.85em;display:inline-flex;align-items:center;gap:6px;min-width:6.5em;min-height:1.9em;vertical-align:middle;border:3px dashed var(--line);background:var(--sky);border-radius:12px;padding:2px 10px;color:var(--ink);cursor:pointer;line-height:1.3;text-align:left}
+.oslot.filled{border-style:solid;border-color:var(--ink);background:var(--card)}
+.oslot.over{border-color:var(--kw);background:var(--kw-soft)}
+.oslot.c1{border-style:solid;border-color:var(--first);background:var(--first-soft);color:var(--first);font-weight:700}
+.oslot.c2{border-style:solid;border-color:var(--then);background:var(--then-soft);color:var(--then);font-weight:700}
+.oslot.wrongslot{border-style:solid;border-color:var(--bad);background:var(--bad-soft);color:var(--bad);text-decoration:line-through}
+.oslot[disabled]{cursor:default}
+.ohint{color:var(--muted);font-size:.8em}
+.emo.sm{font-size:26px}
+.oslot .mini .nope{width:18px;height:18px;font-size:11px;border-width:2px;right:-8px;top:-6px}
+.pcard{touch-action:none;user-select:none;-webkit-user-select:none}
+.pcard.lifted{opacity:.35}
+.dragghost{position:fixed;z-index:50;pointer-events:none;opacity:.92;box-shadow:0 10px 24px rgba(0,0,0,.2);transform:rotate(-2deg)}
+
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1><span class="c1">Although</span> or <span class="c2">Despite</span>?</h1>
+    <div class="tabs" role="tablist" aria-label="Activity" id="tabs"></div>
+  </header>
+  <div class="band new" id="band" aria-live="polite">
+    <div class="who"><span class="light" aria-hidden="true"></span><span id="who">—</span></div>
+    <span class="state" id="state">Just started</span>
+    <button class="reset" type="button" id="reset">New student</button>
+    <div class="modes" id="modes"></div>
+    <p class="help" id="help" hidden></p>
+  </div>
+  <div class="status">
+    <span id="qnum">Question 1 of 10</span>
+    <div class="dots" id="dots" aria-hidden="true"></div>
+    <span class="score" id="score">Score: 0</span>
+  </div>
+  <main class="stage" id="stage" aria-live="polite"></main>
+  <section aria-labelledby="rules-h">
+    <div class="rules-head">
+      <h2 id="rules-h">Remember</h2>
+      <button class="toggle" id="hint-toggle" aria-pressed="true">Hide hints</button>
+    </div>
+    <div class="rules" id="rules" style="margin-top:8px"></div>
+  </section>
+</div>
+<script>
+// ALTHOUGH / DESPITE. p = problem as a full idea, n = problem as a thing (or being ...),
+// r = what still happened, x = an expected result (no surprise, so the sentence is silly).
+const CONF = {
+  key:'da',
+  words:['although','despite'],
+  kwRe:/(although|despite|Although|Despite)/,
+  noMidComma:false,
+  modes:{pick:'Pick the word', order:'Which part?', build:'Build the sentence', silly:'True or silly?', write:'Write it 4 ways'},
+  tags:{
+    A:'"___ although ___." sentences', B:'"Although ___, ___." sentences',
+    C:'"___ despite ___." sentences', D:'"Despite ___, ___." sentences',
+    alth:'using a full idea after "although"', desp:'using a thing after "despite"',
+    but:'not using "but" with although or despite', mean:'what "although" and "despite" mean'
+  },
+  items:[
+    {p:'it was raining',        n:'the rain',          pE:'🌧️', r:'we played football',         rE:'⚽', x:'we stayed indoors'},
+    {p:'I was tired',           n:'being tired',       pE:'😴', r:'I finished my homework',     rE:'📝', x:'I went to bed early'},
+    {p:'it was very hot',       n:'the heat',          pE:'🥵', r:'they ran the race',          rE:'🏃', x:'they drank lots of water'},
+    {p:'the traffic was heavy', n:'the heavy traffic', pE:'🚗', r:'we reached school on time',  rE:'🏫', x:'we were late for school'},
+    {p:'she was scared',        n:'being scared',      pE:'😨', r:'she sang on stage',          rE:'🎤', x:'she hid behind her mother'},
+    {p:'he had a sore leg',     n:'his sore leg',      pE:'🦵', r:'he finished the race',       rE:'🏅', x:'he walked slowly'},
+    {p:'the class was noisy',   n:'the noise',         pE:'🔊', r:'I finished reading my book', rE:'📖', x:'I could not hear the teacher'},
+    {p:'the test was difficult',n:'the difficult test',pE:'🤯', r:'we all passed',              rE:'✅', x:'many of us made mistakes'},
+    {p:'the food was spicy',    n:'the spicy food',    pE:'🌶️', r:'I finished my lunch',        rE:'🍽️', x:'my mouth felt hot'},
+    {p:'it was dark',           n:'the darkness',      pE:'🌙', r:'we found our way home',      rE:'🏠', x:'we switched on our torches'},
+    {p:'they were hungry',      n:'being hungry',      pE:'😫', r:'they waited for everyone',   rE:'⏳', x:'they ate quickly'}
+  ],
+  learn:[
+    {title:'Two parts',
+     html:`<p class="lp">These sentences have <b>two parts</b>.</p>
+      <div class="lrow"><span class="emo">🌧️</span><span class="c1">it was raining</span><span class="big">→</span><span class="emo">⚽</span><span class="c2">we played football</span></div>
+      <p class="lp"><span class="c1">Blue part:</span> the <b>problem</b>.<br><span class="c2">Green part:</span> what <b>still happened</b>.</p>
+      <p class="tip">It is a <b>surprise</b>! When it rains, we do not usually play football.</p>`,
+     say:'These sentences have two parts. The blue part is the problem. The green part is what still happened. It is a surprise!'},
+    {title:'Although + a full idea',
+     html:`<p class="ex revealed"><span class="kw">Although</span> <span class="e1">it was raining</span>, <span class="e2">we played football</span>.</p>
+      <p class="ex revealed"><span class="e2">We played football</span> <span class="kw">although</span> <span class="e1">it was raining</span>.</p>
+      <p class="lp">After <b class="kwc">although</b>, write a <b>full idea</b>: who or what + what happened.</p>
+      <p class="lp"><span class="c1">it was raining</span> &nbsp; <span class="c1">I was tired</span> &nbsp; <span class="c1">the food was spicy</span></p>
+      <p class="tip">When <b>Although</b> starts the sentence, put a <b>comma</b> after the first part.</p>`,
+     say:'Although it was raining, we played football. After although, write a full idea: who or what, plus what happened.'},
+    {title:'Despite + a thing',
+     html:`<p class="ex revealed"><span class="kw">Despite</span> <span class="e1">the rain</span>, <span class="e2">we played football</span>.</p>
+      <p class="ex revealed"><span class="e2">We played football</span> <span class="kw">despite</span> <span class="e1">the rain</span>.</p>
+      <p class="lp">After <b class="kwc">despite</b>, write a <b>thing</b>, not a full idea.</p>
+      <p class="ex revealed"><span class="e1">it was raining</span> → <span class="e1">the rain</span><br><span class="e1">the food was spicy</span> → <span class="e1">the spicy food</span><br><span class="e1">I was tired</span> → <span class="e1">being tired</span></p>`,
+     say:'Despite the rain, we played football. After despite, write a thing, not a full idea. It was raining becomes the rain. I was tired becomes being tired.'},
+    {title:'Which part goes where?',
+     html:`<p class="lp"><b class="kwc">Although</b> and <b class="kwc">despite</b> go with the <span class="c1">problem</span>.</p>
+      <p class="ex good revealed"><span class="mark">✓</span><span class="kw">Although</span> <span class="e1">it was raining</span>, <span class="e2">we played football</span>.</p>
+      <p class="ex bad"><span class="mark">✗</span><span class="kw">Although</span> we played football, it was raining.</p>
+      <p class="tip">Quick check: ask "What was the problem?" Put it right after <b>although</b> or <b>despite</b>.</p>`,
+     say:'Although and despite go with the problem. Ask: what was the problem? Put it right after although or despite.'},
+    {title:'Watch out!',
+     html:`<p class="ex bad"><span class="mark">✗</span>Although it was raining, <span class="strike">but</span> we played football.</p>
+      <p class="lp">Use only <b>one</b> joining word. No <b>but</b>!</p>
+      <p class="ex bad"><span class="mark">✗</span>Despite <span class="strike">it was raining</span>, we played football.</p>
+      <p class="ex bad"><span class="mark">✗</span>Despite <span class="strike">of</span> the rain, we played football.</p>
+      <p class="lp">Now you are ready to practise!</p>`,
+     say:'Watch out! Use only one joining word. No but. After despite, do not write a full idea. And never say despite of. Now you are ready to practise.'}
+  ],
+  kwOf: pat => (pat==='A'||pat==='B') ? 'although' : 'despite',
+  // swap = no-surprise result (silly). flip = wrong kind of words after the joining word.
+  parts(it, pat, o){
+    const R = {t: o.swap ? it.x : it.r, r:'e2'};
+    const Pf = {t: o.flip ? it.n : it.p, r:'e1'}, Nf = {t: o.flip ? it.p : it.n, r:'e1'};
+    if (pat==='A') return [R,' ',{t:'although',r:'kw'},' ',Pf,'.'];
+    if (pat==='B') return [{t:'Although',r:'kw'},' ',Pf,', ',R,'.'];
+    if (pat==='C') return [R,' ',{t:'despite',r:'kw'},' ',Nf,'.'];
+    return [{t:'Despite',r:'kw'},' ',Nf,', ',R,'.'];
+  },
+  idea: (it, mode) => [
+    {label:'1 · The problem', e:it.pE, t:it.p, sub: mode==='write' ? `As a thing: <b>${it.n}</b>` : ''},
+    {label:'2 · It still happened', e:it.rE, t:it.r}
+  ],
+  pickFb(it, pat){
+    return this.kwOf(pat)==='although'
+      ? `<span class="c1">${it.p}</span> is a full idea (who + what happened). Use <b class="kwc">although</b>.`
+      : `<span class="c1">${it.n}</span> is not a full idea. It is a thing${/^being/.test(it.n) ? ' (being…)' : ''}. Use <b class="kwc">despite</b>.`;
+  },
+  emojiOf: (it, id) => ({e: id==='r' ? it.rE : it.pE}),
+  orderFb(it, pat){
+    const kw = this.kwOf(pat), cl = kw==='although' ? it.p : it.n;
+    return `<b class="kwc">${kw}</b> goes with the problem: <span class="c1">${cl}</span>. What still happened (<span class="c2">${it.r}</span>) goes in the other place.`;
+  },
+  orderHint: pat => `Put the problem right after <b class="kwc">${(pat==='A'||pat==='B')?'although':'despite'}</b>.`,
+  pickTag: pat => (pat==='A'||pat==='B') ? [pat,'alth'] : [pat,'desp'],
+  build(it, pat){
+    const tiles = {r:it.r, p:it.p, n:it.n};
+    if (pat==='A') return {tiles, bits:['#',' although ','#','.'],       ans:['r','p']};
+    if (pat==='B') return {tiles, bits:['Although ','#',', ','#','.'],   ans:['p','r']};
+    if (pat==='C') return {tiles, bits:['#',' despite ','#','.'],        ans:['r','n']};
+    return              {tiles, bits:['Despite ','#',', ','#','.'],     ans:['n','r']};
+  },
+  roleOf: id => id==='r' ? 'c2' : 'c1',
+  buildTag(pat, slots){
+    if (this.kwOf(pat)==='although' && slots.includes('n')) return [pat,'alth'];
+    if (this.kwOf(pat)==='despite' && slots.includes('p')) return [pat,'desp'];
+    return [pat];
+  },
+  ruleHint: pat => (pat==='A'||pat==='B')
+    ? 'Hint: <b class="kwc">although</b> needs a full idea, like <i>it was raining</i>.'
+    : 'Hint: <b class="kwc">despite</b> needs a thing, like <i>the rain</i> or <i>being tired</i>.',
+  sillyFb(it, pat, swap){
+    const kw = this.kwOf(pat);
+    return swap
+      ? `If <span class="c1">${it.p}</span>, of course <span class="c2">${it.x}</span>. That is not a surprise, so <b class="kwc">${kw}</b> is silly here!`
+      : `<span class="c1">${cap(it.p)}</span>, but <span class="c2">${it.r}</span> anyway. That is a surprise, so <b class="kwc">${kw}</b> makes sense.`;
+  },
+  sillyTag: pat => [pat,'mean'],
+  writeOrder:['B','A','D','C'],
+  skel:{
+    A:'_____ <span class="kw">although</span> _____.',
+    B:'<span class="kw">Although</span> _____, _____.',
+    C:'_____ <span class="kw">despite</span> _____.',
+    D:'<span class="kw">Despite</span> _____, _____.'
+  },
+  writeCheck(it, pat, v, same){
+    const kw = this.kwOf(pat);
+    if (/\bbut\b/i.test(v))
+      return {tags:['but'], msg:`Do not use <b>but</b> with <b class="kwc">${kw}</b>. One joining word is enough.`};
+    if (kw==='despite' && /\bdespite of\b/i.test(v))
+      return {tags:['desp'], msg:'Say <b class="kwc">despite</b>, not <b>despite of</b>.'};
+    if (kw==='although' && same({flip:true}))
+      return {tags:['alth'], msg:`<b class="kwc">Although</b> needs a full idea. Use <span class="c1">${it.p}</span>.`};
+    if (kw==='despite' && same({flip:true}))
+      return {tags:['desp'], msg:`<b class="kwc">Despite</b> needs a thing, not a full idea. Use <span class="c1">${it.n}</span>.`};
+    return null;
+  },
+  rulesHTML:`
+    <div class="rule"><span class="rule-word"><span class="kwc">although</span> + <span class="c1">full idea</span></span>
+      <p><b class="kwc">Although</b> <span class="c1">it was raining</span>, we played football.</p></div>
+    <div class="rule"><span class="rule-word"><span class="kwc">despite</span> + <span class="c1">a thing</span></span>
+      <p><b class="kwc">Despite</b> <span class="c1">the rain</span>, we played football.</p></div>
+    <p class="rule-note"><b>Although</b> and <b>despite</b> go with the <b>problem</b>.<br>No <b>but</b>! Never say "Although it was raining, <s>but</s> we played."</p>`,
+  endMsg:['Excellent! You know although and despite.','Keep practising. Although + a full idea. Despite + a thing.']
+};
+
+// Shared engine (adapted from "Which Came First?"). Everything topic-specific lives in CONF.
+const C = CONF;
+const N = 10;
+const $ = s => document.querySelector(s);
+const stage = $('#stage');
+const shuffle = arr => { const a = arr.slice(); for (let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; };
+const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+
+// Build a sentence (array of parts) and capitalise its first letter.
+function P(it, pat, o){
+  const ps = C.parts(it, pat, o || {}).map(p => typeof p==='string' ? {t:p} : Object.assign({}, p));
+  const f = ps.find(p => p.t.trim()); if (f) f.t = cap(f.t);
+  return ps;
+}
+// Same sentence with the two parts swapped round (a common mistake).
+function PO(it, pat){
+  const ps = C.parts(it, pat, {}).map(p => typeof p==='string' ? {t:p} : Object.assign({}, p));
+  const a = ps.findIndex(p => p.r==='e1'), b = ps.findIndex(p => p.r==='e2');
+  const ta = ps[a].t; ps[a] = {t:ps[b].t, r:'e2'}; ps[b] = {t:ta, r:'e1'};
+  const f = ps.find(p => p.t.trim()); if (f) f.t = cap(f.t);
+  return ps;
+}
+const kwBlank = pat => startsWithKw(pat) ? 0 : 1;   // which blank sits right after the joining word
+const sentHTML = ps => ps.map(p => p.r ? `<span class="${p.r}">${p.t}</span>` : p.t).join('');
+const plain = ps => ps.map(p => p.t).join('');
+const startsWithKw = pat => P(C.items[0], pat)[0].r === 'kw';
+
+function speak(text){
+  try{
+    const syn = window.speechSynthesis; if(!syn) return;
+    syn.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.rate = 0.85;
+    const v = syn.getVoices().find(v => /^en[-_](GB|SG|AU)/i.test(v.lang));
+    if (v) { u.voice = v; u.lang = v.lang; } else u.lang = 'en-GB';
+    syn.speak(u);
+  }catch(e){}
+}
+
+let S;
+
+/* ---------- Progress (saved on this device) ---------- */
+const MODES = C.modes;
+const FIRST_MODE = Object.keys(MODES)[0];
+const TAGS = Object.assign({order:'which part goes right after the joining word', comma:'commas', caps:'capital letters', stop:'full stops', words:'copying the words correctly'}, C.tags);
+const blankP = () => ({name:'', modes:{}, recent:[]});
+let PR = blankP();
+try { const j = JSON.parse(localStorage.getItem(C.key+'-progress') || 'null'); if (j && typeof j==='object') PR = Object.assign(blankP(), j); } catch(e){}
+function saveP(){ try { localStorage.setItem(C.key+'-progress', JSON.stringify(PR)); } catch(e){} }
+function logAnswer(ok, tags){
+  PR.recent.push({ok, tags: ok ? [] : (tags || [])});
+  if (PR.recent.length > 12) PR.recent = PR.recent.slice(-12);
+  saveP();
+}
+const starsFor = (score, max) => { const r = score/max; return r>=.9?3:r>=.6?2:r>=.3?1:0; };
+function renderBand(){
+  const last = PR.recent.slice(-8);
+  let st='new', label='Just started';
+  if (last.length >= 3){
+    const r = last.filter(x=>x.ok).length / last.length;
+    if (r >= .8){ st='green'; label='On track'; }
+    else if (r >= .5){ st='amber'; label='Getting there'; }
+    else { st='red'; label='Needs help'; }
+  }
+  $('#band').className = 'band ' + st;
+  $('#who').textContent = PR.name || 'Type your name';
+  $('#state').textContent = label;
+  $('#modes').innerHTML = Object.keys(MODES).map(m => {
+    const d = PR.modes[m], cur = S && S.mode===m;
+    const info = d ? `<span class="st">${'★'.repeat(d.best)}${'☆'.repeat(3-d.best)}</span> ${d.rounds} round${d.rounds>1?'s':''}`
+                   : (cur ? 'doing now' : 'not yet');
+    return `<button type="button" class="mchip ${cur?'cur':''}" data-go="${m}"><b>${MODES[m]}</b> ${info}</button>`;
+  }).join('');
+  const cnt = {};
+  PR.recent.forEach(x => { if (!x.ok) x.tags.forEach(t => cnt[t] = (cnt[t]||0) + 1); });
+  const top = Object.entries(cnt).filter(([t,n]) => n>=2 && TAGS[t]).sort((a,b) => b[1]-a[1]).slice(0,2).map(([t]) => TAGS[t]);
+  const help = $('#help');
+  help.textContent = top.length ? 'Needs help with: ' + top.join(' and ') : '';
+  help.hidden = !top.length;
+}
+let resetTimer;
+$('#reset').addEventListener('click', e => {
+  const b = e.currentTarget;
+  if (b.classList.contains('armed')){
+    clearTimeout(resetTimer); b.classList.remove('armed'); b.textContent = 'New student';
+    PR = blankP(); saveP(); newRound(FIRST_MODE);
+  } else {
+    b.classList.add('armed'); b.textContent = 'Tap again to clear progress';
+    resetTimer = setTimeout(() => { b.classList.remove('armed'); b.textContent = 'New student'; }, 3500);
+  }
+});
+function newRound(mode){
+  if (mode==='learn'){
+    S = { mode, n:C.learn.length, max:0, i:0, score:0, results:[], done:false, qs:[] };
+    document.querySelectorAll('.tab').forEach(t => t.setAttribute('aria-selected', String(t.dataset.mode===mode)));
+    try{ speechSynthesis.cancel(); }catch(e){}
+    return render();
+  }
+  const n = mode==='write' ? 5 : N;
+  let items=[]; while(items.length<n) items = items.concat(shuffle(C.items));
+  let pats=[];  while(pats.length<n)  pats  = pats.concat(shuffle(['A','B','C','D']));
+  const swaps = shuffle(Array.from({length:n},(_,i)=>i<n/2));
+  const kinds = shuffle(Array.from({length:n},(_,i)=>i%2 ? 'judge' : 'tap'));
+  S = { mode, n, max: mode==='write' ? n*4 : n, i:0, score:0, results:[], done:false,
+        qs: items.slice(0,n).map((p,i)=>({p, pat:pats[i], swap:swaps[i], kind:kinds[i]})) };
+  document.querySelectorAll('.tab').forEach(t => t.setAttribute('aria-selected', String(t.dataset.mode===mode)));
+  startQ();
+}
+function startQ(){
+  S.checked=false; S.slots=[null,null]; S.vals=['','','','']; S.marks=null; S.tries=0; S.shown=false; S.pick=null;
+  try{ speechSynthesis.cancel(); }catch(e){}
+  const q = S.qs[S.i];
+  S.order = q ? shuffle(Object.keys(C.build(q.p, q.pat).tiles)) : [];
+  S.cards = q ? shuffle(C.build(q.p, q.pat).ans) : [];
+  render();
+}
+function next(){
+  S.i++;
+  if (S.i>=S.n){
+    S.done = true;
+    const d = PR.modes[S.mode] || {rounds:0, best:0};
+    d.rounds++; d.best = Math.max(d.best, starsFor(S.score, S.max));
+    PR.modes[S.mode] = d; saveP();
+  }
+  S.done ? render() : startQ();
+}
+// one-shot questions (two buttons)
+function record(ok, tags){ S.checked=true; S.results[S.i]= ok ? 'first' : false; if(ok) S.score++; logAnswer(ok, tags); }
+// Up to 3 tries. Only the first try goes into the progress band; the dot shows amber when fixed on a later try.
+const MAX_TRIES = 3;
+function attempt(ok, tags){
+  S.tries++;
+  if (S.tries===1) logAnswer(ok, tags);
+  if (ok || S.tries>=MAX_TRIES){
+    S.checked = true;
+    S.results[S.i] = ok ? (S.tries===1 ? 'first' : 'later') : false;
+    if (ok) S.score++;
+  }
+}
+const triesLeft = () => { const n = MAX_TRIES - S.tries; return `<p class="tries-left">${n} ${n===1?'try':'tries'} left</p>`; };
+const retryBox = lines => `<div class="fb try"><span class="fb-head">Not yet. Try again!</span>${lines.filter(Boolean).map(l=>`<p>${l}</p>`).join('')}${triesLeft()}</div>`;
+const okHead = () => S.tries>1 ? 'You fixed it!' : 'Well done!';
+const nextBtn = (label='Next') => `<div class="actions"><button class="btn" type="button" data-act="next">${S.i===S.n-1?'See my score':label}</button></div>`;
+
+function renderStatus(){
+  if (S.mode==='learn'){
+    $('#qnum').textContent = `Learn it: card ${S.i+1} of ${S.n}`;
+    $('#score').textContent = '';
+    $('#dots').innerHTML = Array.from({length:S.n},(_,k)=>`<span class="dot ${k<S.i?'ok':k===S.i?'now':''}"></span>`).join('');
+    return;
+  }
+  $('#qnum').textContent = S.done ? 'Finished!' : `${S.mode==='write'?'Picture set':'Question'} ${S.i+1} of ${S.n}`;
+  $('#score').textContent = `Score: ${S.score} / ${S.max}`;
+  $('#dots').innerHTML = Array.from({length:S.n},(_,k)=>{
+    const r=S.results[k]; const c = r==='first'?'ok':r==='later'?'retry':r===false?'no':(k===S.i&&!S.done?'now':'');
+    return `<span class="dot ${c}"></span>`; }).join('');
+}
+
+function render(){
+  renderBand();
+  renderStatus();
+  if (!PR.name) return renderName();
+  if (S.mode==='learn') return renderLearn();
+  if (S.done) return renderEnd();
+  const q=S.qs[S.i];
+  ({order:renderOrder, pick:renderPick, happen:renderHappen, build:renderBuild, silly:renderSilly, write:renderWrite})[S.mode](q);
+}
+
+const speakBtn = `<button class="speak" type="button" data-act="speak" aria-label="Read the sentence aloud">🔊 Read</button>`;
+function stations(it, mode){
+  const [a,b] = C.idea(it, mode);
+  const one = (s,k) => `<div class="fixed ${k?'s2':''}"><span class="slot-label">${s.label}</span>
+      <div class="pic" aria-hidden="true"><span class="emo">${s.e}</span>${s.cross?'<span class="nope">✖</span>':''}</div>
+      <p class="clause ${k?'c2':'c1'}">${s.t}</p>${s.sub?`<p class="sub">${s.sub}</p>`:''}</div>`;
+  return `<div class="pics">${one(a,0)}<div class="arrow" aria-hidden="true">→</div>${one(b,1)}</div>`;
+}
+
+/* ---------- Pick the word ---------- */
+function renderPick(q){
+  const ps = P(q.p, q.pat);
+  const kw = C.kwOf(q.pat), first = startsWithKw(q.pat);
+  const shown = S.checked ? sentHTML(ps) : ps.map(p => p.r==='kw' ? `<span class="gap">?</span>` : (p.r ? `<span class="${p.r}">${p.t}</span>` : p.t)).join('');
+  const ok = S.results[S.i];
+  stage.innerHTML = `
+    <p class="prompt">Look at the pictures. Which word fits the gap?</p>
+    ${stations(q.p,'pick')}
+    <div class="sentence-row"><p class="sentence ${S.checked?'revealed':''}">${shown}</p></div>
+    <div class="choices">${C.words.map(w => `<button type="button" class="choice word ${S.checked&&S.pick===w?'picked':''}" data-word="${w}" ${S.checked?'disabled':''}>${first?cap(w):w}</button>`).join('')}</div>
+    ${S.checked ? `<div class="fb ${ok?'ok':'no'}"><span class="fb-head">${ok?'Well done!':'Not quite.'}</span>${ok?'':`<p>The answer is <b class="kwc">${first?cap(kw):kw}</b>.</p>`}<p>${C.pickFb(q.p, q.pat)}</p></div>${nextBtn()}` : ''}`;
+  S.say = S.checked ? plain(ps) : null;
+}
+
+/* ---------- Which part? ---------- */
+function renderOrder(q){
+  const b = C.build(q.p, q.pat), kb = kwBlank(q.pat), kw = C.kwOf(q.pat);
+  const ok = S.results[S.i];
+  const fbBox = extra => `<div class="fb ${ok?'ok':'no'}"><span class="fb-head">${ok?'Well done!':'Not quite.'}</span>${extra||''}<p>${C.orderFb(q.p, q.pat)}</p></div>${nextBtn()}`;
+  if (q.kind==='tap'){
+    const right = S.slots[0]===b.ans[0] && S.slots[1]===b.ans[1];
+    const cardIn = (id, bi) => { const m = C.emojiOf(q.p, id);
+      return `<span class="mini" aria-hidden="true"><span class="emo sm">${m.e}</span>${m.cross?'<span class="nope">✖</span>':''}</span>${bi===0 ? cap(b.tiles[id]) : b.tiles[id]}`; };
+    let n=-1;
+    const frame = b.bits.map((bit, bi) => {
+      if (bit!=='#') return bit.replace(C.kwRe, '<span class="kw">$1</span>');
+      n++; const id = S.slots[n];
+      const st = S.checked ? (id===b.ans[n] ? C.roleOf(id) : 'wrongslot') : (id ? 'filled' : '');
+      return `<button type="button" class="oslot ${st}" data-oslot="${n}" aria-label="Space ${n+1}${id?': '+b.tiles[id]:''}" ${S.checked?'disabled':''}>${id ? cardIn(id, bi) : '<span class="ohint">drop here</span>'}</button>`;
+    }).join('');
+    const left = S.cards.filter(id => !S.slots.includes(id));
+    const card = id => { const m = C.emojiOf(q.p, id);
+      return `<button type="button" class="pcard" data-part="${id}">
+        <span class="mini" aria-hidden="true"><span class="emo">${m.e}</span>${m.cross?'<span class="nope">✖</span>':''}</span>
+        <span class="lbl">${b.tiles[id]}</span></button>`; };
+    stage.innerHTML = `
+      <p class="prompt">Put both parts in the right places. Drag them, or tap them. Tap a part in the sentence to take it out.</p>
+      <p class="frame oframe">${frame}</p>
+      ${S.checked ? fbBox(right ? '' : `<p>It should be: <span class="revealed">${sentHTML(P(q.p,q.pat))}</span></p>`)
+        : `<div class="pcards">${left.length ? left.map(card).join('') : '<span class="tray-empty">Both parts placed. Press Check!</span>'}</div>
+           <div class="actions"><button class="btn" type="button" data-act="check-order" ${S.slots.every(Boolean)?'':'disabled'}>Check</button></div>`}`;
+    S.say = S.checked ? plain(P(q.p,q.pat)) : null;
+    return;
+  }
+  const ps = q.swap ? PO(q.p, q.pat) : P(q.p, q.pat);
+  stage.innerHTML = `
+    <p class="prompt">Look at the word <b class="kwc">${kw}</b>. Does the sentence make sense, or is it silly?</p>
+    <div class="sentence-row"><p class="sentence ${S.checked?'revealed':''}">${sentHTML(ps)}</p>${speakBtn}</div>
+    <div class="choices">
+      <button type="button" class="choice ${S.checked&&S.pick==='right'?'picked':''}" data-way="right" ${S.checked?'disabled':''}>Makes sense</button>
+      <button type="button" class="choice silly ${S.checked&&S.pick==='swapped'?'picked':''}" data-way="swapped" ${S.checked?'disabled':''}>Silly!</button>
+    </div>
+    ${S.checked ? fbBox(q.swap ? `<p>It is silly because the parts are the wrong way round. It should be: <span class="revealed">${sentHTML(P(q.p,q.pat))}</span></p>` : `<p>This makes sense. The parts are in the right places.</p>`) : ''}`;
+  S.say = plain(ps);
+}
+
+/* ---------- What happens? ---------- */
+function renderHappen(q){
+  const ps = P(q.p, q.pat);
+  const h = C.happen(q.p, q.swap, q.pat);
+  const ok = S.results[S.i];
+  stage.innerHTML = `
+    <p class="prompt">Read the sentence. Then read what happens this time.</p>
+    <div class="sentence-row"><p class="sentence ${S.checked?'revealed':''}">${sentHTML(ps)}</p>${speakBtn}</div>
+    <div class="scene"><span class="scene-label">This time</span>
+      <div class="scene-line"><span class="mini" aria-hidden="true"><span class="emo">${h.scene.e}</span>${h.scene.cross?'<span class="nope">✖</span>':''}</span><span class="c1">${h.scene.t}</span></div></div>
+    <div class="scene"><span class="scene-label">Will this happen?</span>
+      <div class="scene-line"><span class="emo" aria-hidden="true">${h.result.e}</span><span class="c2">${h.result.t}</span></div></div>
+    <div class="choices">
+      <button type="button" class="choice ${S.checked&&S.pick==='yes'?'picked':''}" data-yn="yes" ${S.checked?'disabled':''}>Yes, it will</button>
+      <button type="button" class="choice silly ${S.checked&&S.pick==='no'?'picked':''}" data-yn="no" ${S.checked?'disabled':''}>No, it will not</button>
+    </div>
+    ${S.checked ? `<div class="fb ${ok?'ok':'no'}"><span class="fb-head">${ok?'Well done!':'Not quite.'}</span><p>${h.fb}</p></div>${nextBtn()}` : ''}`;
+  S.say = plain(ps);
+}
+
+/* ---------- Build the sentence ---------- */
+function renderBuild(q){
+  const b = C.build(q.p, q.pat); let n=-1;
+  const frame = b.bits.map((bit, bi) => {
+    if (bit!=='#') return bit.replace(C.kwRe, '<span class="kw">$1</span>');
+    n++; const id=S.slots[n];
+    const cls = S.checked && id ? (b.ans.includes(id) ? C.roleOf(id) : 'filled') : (id?'filled':'');
+    const txt = id ? (bi===0 ? cap(b.tiles[id]) : b.tiles[id]) : '&nbsp;';
+    return `<button type="button" class="blank ${cls}" data-blank="${n}" aria-label="Blank ${n+1}">${txt}</button>`;
+  }).join('');
+  const left = S.order.filter(id => !S.slots.includes(id));
+  const ok = S.results[S.i];
+  stage.innerHTML = `
+    <p class="prompt">Look at the pictures. Tap the words to finish the sentence. Careful: one set of words does not fit!</p>
+    ${stations(q.p,'build')}
+    <p class="frame">${frame}</p>
+    ${!S.checked && S.tries ? retryBox([S.slots[0]===b.ans[1] && S.slots[1]===b.ans[0] ? 'The two parts are the wrong way round. '+C.orderHint(q.pat) : 'Look at the yellow word. Tap a blank to take the words out.', S.tries>=2 ? C.ruleHint(q.pat) : '']) : ''}
+    ${S.checked
+      ? `<div class="fb ${ok?'ok':'no'}"><span class="fb-head">${ok?okHead():'Not quite.'}</span>${ok?'':`<p class="revealed">${sentHTML(P(q.p,q.pat))}</p>`}<p>${C.ruleHint(q.pat).replace(/^Hint: /,'')}</p></div>${nextBtn()}`
+      : `<div class="tiles">${left.map(id=>`<button type="button" class="tile" data-tile="${id}">${b.tiles[id]}</button>`).join('')}</div>
+         <div class="actions"><button class="btn" type="button" data-act="check-build" ${S.slots.every(Boolean)?'':'disabled'}>Check</button></div>`}`;
+  S.say = null;
+}
+
+/* ---------- True or silly ---------- */
+function renderSilly(q){
+  const ps = P(q.p, q.pat, {swap:q.swap});
+  const ok = S.results[S.i];
+  stage.innerHTML = `
+    <p class="prompt">Read the sentence. Does it make sense, or is it silly?</p>
+    <div class="sentence-row"><p class="sentence ${S.checked?'revealed':''}">${sentHTML(ps)}</p>${speakBtn}</div>
+    <div class="choices">
+      <button type="button" class="choice ${S.checked&&S.pick==='true'?'picked':''}" data-pick="true" ${S.checked?'disabled':''}>Makes sense</button>
+      <button type="button" class="choice silly ${S.checked&&S.pick==='silly'?'picked':''}" data-pick="silly" ${S.checked?'disabled':''}>Silly!</button>
+    </div>
+    ${S.checked ? `<div class="fb ${ok?'ok':'no'}"><span class="fb-head">${ok?'Well done!':'Not quite.'}</span><p>${C.sillyFb(q.p, q.pat, q.swap)}</p></div>${nextBtn()}` : ''}`;
+  S.say = plain(ps);
+}
+
+/* ---------- Write it 4 ways ---------- */
+const esc = s => s.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+const escRe = s => s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+const core = s => s.toLowerCase().replace(/[’‘]/g,"'")
+  .replace(/\bwon't\b/g,'will not').replace(/\bcan't\b/g,'can not').replace(/\bcannot\b/g,'can not').replace(/n't\b/g,' not')
+  .replace(/[.,!?]/g,' ').replace(/\s+/g,' ').trim();
+const hasComma = pat => plain(P(C.items[0], pat)).includes(',');
+function mark(q, pat, val){
+  const exp = plain(P(q.p, pat));
+  const v = val.trim().replace(/\s+/g,' ');
+  if (!v) return {ok:false, msg:'Write a sentence here.'};
+  if (core(v)!==core(exp)){
+    if (core(v)===core(plain(PO(q.p, pat)))) return {ok:false, tags:[pat,'order'], msg:'The two parts are the wrong way round. '+C.orderHint(pat)};
+    const special = C.writeCheck(q.p, pat, v, s => core(v)===core(plain(P(q.p, pat, s))));
+    if (special) return Object.assign({ok:false}, special);
+    const kw = C.kwOf(pat);
+    if (!new RegExp('\\b'+kw+'\\b','i').test(v))
+      return {ok:false, tags:[pat], msg:`Use the word <b class="kwc">${kw}</b> in this sentence.`};
+    return {ok:false, tags:['words'], msg:'Check your words. Look at the words under the pictures.'};
+  }
+  const fixes = [], tags = [];
+  if (v[0]!==v[0].toUpperCase()){ fixes.push('Start with a capital letter.'); tags.push('caps'); }
+  if (/(^|\s)i(\s|,|\.|$)/.test(v)){ fixes.push('Use a capital <b>I</b>.'); if (!tags.includes('caps')) tags.push('caps'); }
+  if (hasComma(pat)){
+    const firstPart = exp.split(',')[0];
+    if (!(v.includes(',') && core(v.split(',')[0])===core(firstPart))){ fixes.push('Put a comma after the first part.'); tags.push('comma'); }
+  } else if (v.includes(',') && C.noMidComma){ fixes.push('No comma is needed in this sentence.'); tags.push('comma'); }
+  if (!/\.$/.test(v)){ fixes.push('End with a full stop.'); tags.push('stop'); }
+  return fixes.length ? {ok:false, tags, msg:'Almost! '+fixes.join(' ')} : {ok:true};
+}
+function renderWrite(q){
+  const allOk = S.marks && S.marks.every(m=>m.ok);
+  const finished = allOk || S.shown;
+  const rows = C.writeOrder.map((pat,k) => {
+    const m = S.marks && S.marks[k];
+    const lock = S.shown || (m && m.ok);
+    return `<div class="wrow ${m ? (m.ok?'ok':'no') : ''}">
+      <label class="wlabel" for="w${k}"><span class="wnum">${k+1}</span><span>${C.skel[pat]}</span></label>
+      <input class="winput" id="w${k}" data-w="${k}" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" value="${esc(S.vals[k])}" ${lock?'readonly':''}>
+      ${m ? `<p class="wfb">${m.ok ? '✓ Correct!' : m.msg}</p>` : ''}
+      ${S.shown && !(m && m.ok) ? `<p class="wmodel revealed">${sentHTML(P(q.p,pat))}</p>` : ''}
+    </div>`;
+  }).join('');
+  stage.innerHTML = `
+    <p class="prompt">Look at the pictures. Write the same idea in 4 ways.</p>
+    ${stations(q.p,'write')}
+    <div class="wrows">${rows}</div>
+    <div class="actions">${finished
+      ? `<button class="btn" type="button" data-act="next">${S.i===S.n-1?'See my score':'Next pictures'}</button>`
+      : `${S.tries ? triesLeft() : ''}<button class="btn" type="button" data-act="check-write">Check</button>`}</div>`;
+  S.say = null;
+}
+
+/* ---------- Learn it ---------- */
+function renderLearn(){
+  const c = C.learn[S.i], last = S.i===S.n-1;
+  stage.innerHTML = `<div class="learn">
+    <div class="learn-head"><h2>${c.title}</h2>${c.say ? speakBtn : ''}</div>
+    ${c.html}
+    <div class="actions">
+      ${S.i>0 ? `<button class="btn ghost" type="button" data-act="lback">← Back</button>` : ''}
+      ${last ? `<button class="btn" type="button" data-act="lstart">Start practising →</button>`
+             : `<button class="btn" type="button" data-act="lnext">Next →</button>`}
+    </div></div>`;
+  S.say = c.say || null;
+}
+
+/* ---------- Name ---------- */
+function renderName(){
+  stage.innerHTML = `<div class="namebox">
+    <label class="nm-label" for="nm">Type your name to start</label>
+    <input class="winput" id="nm" type="text" maxlength="24" autocomplete="off" spellcheck="false">
+    <div class="actions">
+      <button class="btn ghost" type="button" data-act="setname" data-learn="1">📖 Learn it first</button>
+      <button class="btn" type="button" data-act="setname">Start practising</button>
+    </div>
+  </div>`;
+  S.say = null;
+  const nm = document.getElementById('nm'); if (nm) nm.focus();
+}
+function setName(learn){
+  const nm = document.getElementById('nm'); const v = nm ? nm.value.trim() : '';
+  if (!v){ if (nm) nm.focus(); return; }
+  PR.name = v; saveP();
+  if (learn) newRound('learn'); else render();
+}
+
+/* ---------- End ---------- */
+function renderEnd(){
+  const keys = Object.keys(MODES), nextMode = keys[keys.indexOf(S.mode)+1];
+  const st = starsFor(S.score, S.max);
+  stage.innerHTML = `<div class="end">
+    <div class="stars" aria-label="${st} stars">${'⭐'.repeat(st)}${'☆'.repeat(3-st)}</div>
+    <h2>${S.score} out of ${S.max}</h2>
+    <p>${st===3?C.endMsg[0]:st===2?'Good work! Try again to get 3 stars.':C.endMsg[1]}</p>
+    <div class="actions">
+      <button class="btn ${nextMode?'ghost':''}" type="button" data-act="again">Play again</button>
+      ${nextMode ? `<button class="btn" type="button" data-act="nextmode">${MODES[nextMode]} →</button>` : ''}
+    </div>
+  </div>`;
+}
+
+/* ---------- Which part: placing and dragging ---------- */
+function placePart(id, k){
+  if (S.checked) return;
+  if (k===undefined) k = S.slots.indexOf(null);
+  if (k<0) return;
+  const was = S.slots.indexOf(id); if (was>-1) S.slots[was]=null;
+  S.slots[k] = id; render();
+}
+// Pointer drag works with mouse, finger and pen. A short tap still counts as a click.
+let drag=null, justDragged=false;
+stage.addEventListener('pointerdown', e => {
+  const c = e.target.closest('[data-part]'); if (!c || S.checked || S.mode!=='order') return;
+  drag = {id:c.dataset.part, x:e.clientX, y:e.clientY, el:c, ghost:null};
+});
+window.addEventListener('pointermove', e => {
+  if (!drag) return;
+  if (!drag.ghost){
+    if (Math.hypot(e.clientX-drag.x, e.clientY-drag.y) < 8) return;
+    const r = drag.el.getBoundingClientRect();
+    drag.ghost = drag.el.cloneNode(true); drag.ghost.classList.add('dragghost');
+    drag.ghost.style.width = r.width+'px'; drag.dx = drag.x-r.left; drag.dy = drag.y-r.top;
+    document.body.appendChild(drag.ghost); drag.el.classList.add('lifted');
+  }
+  e.preventDefault();
+  drag.ghost.style.left = (e.clientX-drag.dx)+'px'; drag.ghost.style.top = (e.clientY-drag.dy)+'px';
+  document.querySelectorAll('.oslot').forEach(s => s.classList.remove('over'));
+  const under = document.elementFromPoint(e.clientX, e.clientY); const sl = under && under.closest('[data-oslot]');
+  if (sl) sl.classList.add('over');
+}, {passive:false});
+function endDrag(e){
+  if (!drag) return;
+  const d = drag; drag = null;
+  if (!d.ghost) return;            // it was a tap: the click handler places it
+  d.ghost.remove(); justDragged = true; setTimeout(() => { justDragged=false; }, 350);
+  const under = e && document.elementFromPoint(e.clientX, e.clientY); const sl = under && under.closest('[data-oslot]');
+  if (sl) placePart(d.id, +sl.dataset.oslot); else render();
+}
+window.addEventListener('pointerup', endDrag);
+window.addEventListener('pointercancel', () => endDrag(null));
+
+/* ---------- Events ---------- */
+stage.addEventListener('click', e => {
+  const t = e.target.closest('button'); if (!t) return;
+  if (justDragged && (t.dataset.part || t.dataset.oslot!==undefined)){ justDragged=false; return; }
+  const act = t.dataset.act;
+  const q = S.qs[S.i];
+  if (act==='setname') return setName(!!t.dataset.learn);
+  if (act==='lnext'){ S.i++; render(); try{ window.scrollTo(0,0); }catch(e){} return; }
+  if (act==='lback'){ S.i--; render(); try{ window.scrollTo(0,0); }catch(e){} return; }
+  if (act==='lstart'){ newRound(FIRST_MODE); try{ window.scrollTo(0,0); }catch(e){} return; }
+  if (act==='speak') return S.say ? speak(S.say) : null;
+  if (act==='next') return next();
+  if (act==='again') return newRound(S.mode);
+  if (act==='nextmode'){ const k=Object.keys(MODES); newRound(k[k.indexOf(S.mode)+1]); try{ window.scrollTo(0,0); }catch(e){} return; }
+  if (t.dataset.part && !S.checked){ placePart(t.dataset.part); return; }
+  if (t.dataset.oslot!==undefined && !S.checked){ const k=+t.dataset.oslot; if (S.slots[k]){ S.slots[k]=null; render(); } return; }
+  if (act==='check-order'){
+    const b = C.build(q.p, q.pat);
+    record(S.slots[0]===b.ans[0] && S.slots[1]===b.ans[1], [q.pat,'order']); return render();
+  }
+  if (t.dataset.way && !S.checked){
+    S.pick = t.dataset.way;
+    record((S.pick==='swapped')===q.swap, [q.pat,'order']); return render();
+  }
+  if (t.dataset.word && !S.checked){
+    S.pick = t.dataset.word; const ok = S.pick===C.kwOf(q.pat);
+    record(ok, C.pickTag(q.pat)); return render();
+  }
+  if (t.dataset.yn && !S.checked){
+    S.pick = t.dataset.yn; const h = C.happen(q.p, q.swap, q.pat);
+    record((S.pick==='yes')===h.answer, h.tags); return render();
+  }
+  if (t.dataset.pick && !S.checked){
+    S.pick = t.dataset.pick;
+    record((S.pick==='silly')===q.swap, C.sillyTag(q.pat)); return render();
+  }
+  if (act==='check-build'){
+    const b = C.build(q.p, q.pat);
+    const ok = S.slots[0]===b.ans[0] && S.slots[1]===b.ans[1];
+    const flipped = S.slots[0]===b.ans[1] && S.slots[1]===b.ans[0];
+    attempt(ok, flipped ? [q.pat,'order'] : C.buildTag(q.pat, S.slots));
+    return render();
+  }
+  if (t.dataset.tile){ const k=S.slots.indexOf(null); if(k>-1){ S.slots[k]=t.dataset.tile; render(); } return; }
+  if (t.dataset.blank!==undefined && !S.checked){ const k=+t.dataset.blank; if (S.slots[k]){ S.slots[k]=null; render(); } return; }
+  if (act==='check-write'){
+    S.marks = C.writeOrder.map((p,k)=>mark(q,p,S.vals[k]));
+    const allOk = S.marks.every(m=>m.ok);
+    if (!S.tries){ const c=S.marks.filter(m=>m.ok).length; S.score+=c; S.marks.forEach(m=>logAnswer(m.ok, m.tags)); }
+    S.tries++;
+    if (allOk) S.results[S.i] = S.tries===1 ? 'first' : 'later';
+    else if (S.tries>=MAX_TRIES){ S.shown=true; S.results[S.i]=false; }
+    render();
+    const bad = S.marks.findIndex(m=>!m.ok); if (bad>-1){ const el=document.getElementById('w'+bad); if(el) el.focus(); }
+    return;
+  }
+});
+stage.addEventListener('input', e => { const k=e.target.dataset.w; if (k!==undefined) S.vals[+k]=e.target.value; });
+stage.addEventListener('keydown', e => {
+  if (e.target.id==='nm' && e.key==='Enter'){ e.preventDefault(); return setName(); }
+  if (e.target.dataset && e.target.dataset.w!==undefined && e.key==='Enter'){
+    e.preventDefault();
+    const nxt = document.getElementById('w'+(+e.target.dataset.w+1));
+    if (nxt && !nxt.readOnly) nxt.focus(); else { const b=stage.querySelector('[data-act="check-write"]'); if(b) b.click(); }
+  }
+});
+
+// tabs and rules strip
+$('#tabs').innerHTML = `<button class="tab" role="tab" data-mode="learn" aria-selected="false">📖 Learn it</button>` + Object.entries(MODES).map(([m,l]) => `<button class="tab" role="tab" data-mode="${m}" aria-selected="false">${l}</button>`).join('');
+document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => { newRound(t.dataset.mode); try{ window.scrollTo(0,0); }catch(e){} }));
+$('#rules').innerHTML = C.rulesHTML;
+
+let hints = true;
+try { const h = localStorage.getItem(C.key+'-hints'); if (h!==null) hints = h==='1'; } catch(e){}
+function applyHints(){
+  $('#rules').hidden = !hints;
+  const b = $('#hint-toggle'); b.textContent = hints ? 'Hide hints' : 'Show hints'; b.setAttribute('aria-pressed', String(hints));
+}
+$('#modes').addEventListener('click', e => { const b = e.target.closest('[data-go]'); if (b && PR.name){ newRound(b.dataset.go); try{ window.scrollTo(0,0); }catch(err){} } });
+$('#hint-toggle').addEventListener('click', () => { hints=!hints; try{ localStorage.setItem(C.key+'-hints', hints?'1':'0'); }catch(e){} applyHints(); });
+applyHints();
+try { speechSynthesis.getVoices(); } catch(e){}
+
+newRound(FIRST_MODE);
+
+</script>
+</body>
+</html>
