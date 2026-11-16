@@ -240,6 +240,10 @@ body{padding-top:max(20px,env(safe-area-inset-top,0px))}
 .pcard.lifted{opacity:.35}
 .dragghost{position:fixed;z-index:50;pointer-events:none;opacity:.92;box-shadow:0 10px 24px rgba(0,0,0,.2);transform:rotate(-2deg)}
 
+/* instructions: big, dark and boxed so students do not skip them */
+.prompt{margin:0;color:var(--ink);font-size:clamp(19px,3.8vw,22px);font-weight:500;line-height:1.45;background:var(--kw-soft);border:2px solid var(--amber-line);border-left-width:8px;border-radius:14px;padding:10px 16px}
+.prompt::before{content:"👉";font-family:var(--emoji);margin-right:10px}
+.prompt b{font-weight:700}
 </style>
 </head>
 <body>
